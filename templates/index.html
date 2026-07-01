@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BeamAnalyser</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="logo">Beam<span>Analyser</span></div>
+  <div class="nav-badge">Flask API v1.0</div>
+</nav>
+
+<div class="layout">
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="section-label">Beam configuration</div>
+      <div class="field">
+        <label>Beam type</label>
+        <select id="beamType">
+          <option value="simply_supported">Simply supported</option>
+          <option value="cantilever">Cantilever</option>
+          <option value="overhanging">Overhanging</option>
+          <option value="fixed_fixed">Fixed-fixed</option>
+          <option value="propped_cantilever">Propped cantilever</option>
+          <option value="continuous">Continuous</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Length (m)</label>
+          <input id="beamLength" type="number" value="5" min="0.1" step="0.5"/></div>
+        <div class="field"><label>Segments</label>
+          <input id="nSegments" type="number" value="1000" min="100" step="100"/></div>
+      </div>
+      <div id="supportsBlock" class="field" style="display:none;">
+        <label>Support positions (m, comma-sep)</label>
+        <input id="supportsInput" type="text" value="0, 5"/>
+      </div>
+
+      <!-- Self-weight toggle -->
+      <div class="toggle-row">
+        <label>Include self-weight</label>
+        <label class="toggle">
+          <input type="checkbox" id="selfWeightToggle"/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="selfWeightPanel" class="selfmass-panel" style="display:none;">
+        <div class="selfmass-mode">
+          <button id="swModeAuto" class="active" onclick="setSWMode('auto')">Auto (density)</button>
+          <button id="swModeManual" onclick="setSWMode('manual')">Manual (kg)</button>
+        </div>
+        <div id="swAutoFields">
+          <div class="field" style="margin-top:4px;">
+            <label>Density (kg/m³)</label>
+            <input id="swDensity" type="number" value="7850" min="1" step="10"/>
+          </div>
+        </div>
+        <div id="swManualFields" style="display:none;">
+          <div class="field" style="margin-top:4px;">
+            <label>Total mass (kg)</label>
+            <input id="swMass" type="number" value="100" min="0.1" step="1"/>
+          </div>
+        </div>
+        <div class="field" style="margin-top:2px;">
+          <label style="color:var(--label);font-size:10px;" id="swWeightDisplay">Weight: —</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Cross-section</div>
+      <div class="field">
+        <label>Section type</label>
+        <select id="sectionType">
+          <option value="rectangular">Rectangular</option>
+          <option value="circular">Circular</option>
+          <option value="i_section">I-section</option>
+        </select>
+      </div>
+      <div id="rectFields" class="field-row">
+        <div class="field"><label>Width (mm)</label><input id="secWidth" type="number" value="50" min="1"/></div>
+        <div class="field"><label>Height (mm)</label><input id="secHeight" type="number" value="100" min="1"/></div>
+      </div>
+      <div id="circFields" class="field" style="display:none;">
+        <label>Diameter (mm)</label><input id="secDia" type="number" value="100" min="1"/>
+      </div>
+      <div id="iFields" style="display:none;flex-direction:column;gap:7px;">
+        <div class="field-row">
+          <div class="field"><label>Flange w (mm)</label><input id="iFw" type="number" value="100"/></div>
+          <div class="field"><label>Total h (mm)</label><input id="iH"  type="number" value="200"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Flange t (mm)</label><input id="iFt" type="number" value="10"/></div>
+          <div class="field"><label>Web t (mm)</label><input id="iWt" type="number" value="6"/></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Material</div>
+      <div class="field">
+        <label>Material</label>
+        <select id="material">
+          <option value="structural_steel">Structural steel</option>
+          <option value="aluminium_6061">Aluminium 6061</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>E (GPa)</label><input id="matE" type="number" value="200" step="1"/></div>
+        <div class="field"><label>σ_y (MPa)</label><input id="matSy" type="number" value="250" step="10"/></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Loads</div>
+      <div id="loadList"></div>
+      <button class="add-btn" id="addLoadBtn">+ add load</button>
+    </div>
+
+    <button class="analyse-btn" id="analyseBtn">Analyse beam</button>
+  </aside>
+
+  <!-- ── Main panel ──────────────────────────────────────────────────────── -->
+  <main class="main" id="mainPanel">
+
+    <!-- Top row: beam diagram + metrics -->
+    <div class="top-row">
+
+      <!-- Beam diagram -->
+      <div class="beam-vis">
+        <div class="section-label" style="margin-bottom:10px;">Beam diagram</div>
+        <div class="beam-svg-wrap">
+          <svg id="beamDiagram" viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+
+      <!-- Metric cards stacked -->
+      <div class="metrics" id="metricsRow">
+        <div class="metric" id="m-sf">
+          <div class="metric-label">Safety factor</div>
+          <div class="metric-val" id="v-sf">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Max bending stress</div>
+          <div class="metric-val" id="v-sigma">— <span class="metric-unit">MPa</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Max deflection</div>
+          <div class="metric-val" id="v-def">— <span class="metric-unit">mm</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Max shear force</div>
+          <div class="metric-val" id="v-shear">— <span class="metric-unit">kN</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Plots -->
+    <div class="plots">
+      <div class="plot-card">
+        <div class="plot-title">Shear force diagram · SFD</div>
+        <div class="plot-area"><canvas id="chartSFD"></canvas></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-title">Bending moment diagram · BMD</div>
+        <div class="plot-area"><canvas id="chartBMD"></canvas></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-title">Deflection curve</div>
+        <div class="plot-area"><canvas id="chartDef"></canvas></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-title">Stress heatmap</div>
+        <div class="plot-area" id="stressHeatmap"></div>
+      </div>
+    </div>
+
+    <div id="errorBanner" class="error-banner" style="display:none;"></div>
+
+    <!-- ── Footer ──────────────────────────────────────────────────────────── -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="footer-logo">Beam<span>Analyser</span></span>
+          <span class="footer-tagline">Structural beam analysis in the browser</span>
+        </div>
+        <div class="footer-meta">
+          <div class="footer-item">
+            <span class="footer-icon">⚙</span>
+            <span>Simply supported · Cantilever · Fixed-fixed · Overhanging · Propped · Continuous</span>
+          </div>
+          <div class="footer-item">
+            <span class="footer-icon">📐</span>
+            <span>SFD · BMD · Deflection · Stress heatmap · Safety factor</span>
+          </div>
+          <div class="footer-item">
+            <span class="footer-icon">🔬</span>
+            <span>Rectangular · Circular · I-section cross-sections</span>
+          </div>
+        </div>
+        <div class="footer-credit">
+          <div class="footer-author">
+            <span class="footer-made">Made by</span>
+            <strong class="footer-name">Atharva Chauhan</strong>
+          </div>
+          <div class="footer-project">Mechanical Engineering · 2026</div>
+          <div class="footer-stack">Built with Flask · Chart.js · SVG · Python</div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Atharva Chauhan — BeamAnalyser. All rights reserved.</span>
+        <span class="footer-disclaimer">For educational purposes. Always verify structural calculations with a qualified engineer.</span>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+<!-- ── Load modal ────────────────────────────────────────────────────────── -->
+<div id="loadModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add load</div>
+    <div class="field">
+      <label>Load type</label>
+      <select id="newLoadType">
+        <option value="udl">UDL — uniform distributed load</option>
+        <option value="vdl">VDL — varying distributed load</option>
+        <option value="point">Point load</option>
+        <option value="moment">Applied moment</option>
+      </select>
+    </div>
+
+    <div id="udlFields">
+      <div class="field"><label>Magnitude (kN/m)</label><input id="udlMag" type="number" value="10"/></div>
+      <div class="field-row" style="margin-top:7px;">
+        <div class="field"><label>From x (m)</label><input id="udlX0" type="number" value="0"/></div>
+        <div class="field"><label>To x (m)</label><input id="udlX1" type="number" value="5"/></div>
+      </div>
+    </div>
+
+    <div id="vdlFields" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>w_start (kN/m)</label><input id="vdlW0" type="number" value="0"/></div>
+        <div class="field"><label>w_end (kN/m)</label><input id="vdlW1" type="number" value="10"/></div>
+      </div>
+      <div class="field-row" style="margin-top:7px;">
+        <div class="field"><label>From x (m)</label><input id="vdlX0" type="number" value="0"/></div>
+        <div class="field"><label>To x (m)</label><input id="vdlX1" type="number" value="5"/></div>
+      </div>
+    </div>
+
+    <div id="pointFields" style="display:none;">
+      <div class="field"><label>Magnitude (kN)</label><input id="ptMag" type="number" value="25"/></div>
+      <div class="field" style="margin-top:7px;"><label>Position x (m)</label><input id="ptX" type="number" value="2.5"/></div>
+    </div>
+
+    <div id="momentFields" style="display:none;">
+      <div class="field"><label>Magnitude (kN·m)</label><input id="momMag" type="number" value="10"/></div>
+      <div class="field" style="margin-top:7px;"><label>Position x (m)</label><input id="momX" type="number" value="2.5"/></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelLoad">Cancel</button>
+      <button class="modal-ok"     id="confirmLoad">Add load</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
