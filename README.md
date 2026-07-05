@@ -142,4 +142,4 @@ The app is deployable to Vercel as a Python serverless function with no changes 
 
 ---
 
-*© 2026 Atharva Chauhan, Computer Programming Project*
+*© 2026 Atharva Chauhan, Vox*
