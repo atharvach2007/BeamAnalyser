@@ -5,7 +5,7 @@
 BeamAnalyser is a full-stack engineering tool that lets you model, load, and analyse structural beams entirely in the browser. You configure the beam geometry, cross-section, material, and loading conditions through an interactive dark-themed UI, hit *Analyse*, and get back shear force diagrams, bending moment diagrams, a deflection curve, a stress heatmap, and key structural metrics, all computed in real time by a Python/Flask backend.
 
 ---
-![The Engine]assets_Readme/img.png
+![BeamAnalyser interface](https://cdn.hackclub.com/019f3154-9ffd-76f0-bae9-cba8461d39d3/img.png)
 ---
 ## What it does
 
