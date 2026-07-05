@@ -138,7 +138,7 @@ The app is deployable to Vercel as a Python serverless function with no changes 
 
 ## Disclaimer
 
-> BeamAnalyser is built for **educational purposes** as part of a Computer Programming coursework project. The results it produces, including reaction forces, stress values, deflections, and safety factors, are based on simplified analytical and numerical models and have not been validated for professional structural engineering use. **Always verify any structural calculations with a qualified civil or structural engineer before making real-world decisions.**
+> BeamAnalyser is built for **educational purposes** as part of a coursework project. The results it produces, including reaction forces, stress values, deflections, and safety factors, are based on simplified analytical and numerical models and have not been validated for professional structural engineering use. **Always verify any structural calculations with a qualified civil or structural engineer before making real-world decisions.**
 
 ---
 
