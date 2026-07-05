@@ -1,6 +1,6 @@
 # BeamAnalyser
 
-**A structural beam analysis web application built as a Computer Programming Project by Atharva Chauhan.**
+**A structural beam analysis web application built by Atharva Chauhan.**
 
 BeamAnalyser is a full-stack engineering tool that lets you model, load, and analyse structural beams entirely in the browser. You configure the beam geometry, cross-section, material, and loading conditions through an interactive dark-themed UI, hit *Analyse*, and get back shear force diagrams, bending moment diagrams, a deflection curve, a stress heatmap, and key structural metrics, all computed in real time by a Python/Flask backend.
 
